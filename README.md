@@ -20,4 +20,5 @@ The primary reference used was the SESS Software Requirements Specification from
 
 
 ## AI Use
-AI was only used to improve the consistency of the requirement numbering (as mentioned in *Significant Changes and Deviations*) and to verify that business goals, functional requirements, and acceptance criteria remained aligned.
+- AI was only used to improve the consistency of the requirement numbering (as mentioned in *Significant Changes and Deviations*) and to verify that business goals, functional requirements, and acceptance criteria remained aligned.
+- AI was additionally used to help revise `spec.md` given the Spec Issues listed in `architecture.md`.
