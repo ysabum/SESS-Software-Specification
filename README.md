@@ -55,22 +55,3 @@ Each API route currently returns HTTP `501` with:
 ```json
 {"error": "not_implemented", "message": "..."}
 ```
-
-## Project layout
-
-```text
-app/
-  __init__.py
-  main.py
-  web_interface.py
-  identity_and_access.py
-  ehr_connector.py
-  patient_records.py
-  summary_generation.py
-  source_traceability.py
-  audit_recording.py
-contracts.md
-requirements.txt
-```
-
-The module files correspond to the seven modules in `architecture.md`. `main.py` is the application entry point and `web_interface.py` contains the HTTP boundary. Neither introduces another business module.
