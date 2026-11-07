@@ -22,3 +22,55 @@ The primary reference used was the SESS Software Requirements Specification from
 ## AI Use
 - AI was only used to improve the consistency of the requirement numbering (as mentioned in *Significant Changes and Deviations*) and to verify that business goals, functional requirements, and acceptance criteria remained aligned.
 - AI was additionally used to help revise `spec.md` given the Spec Issues listed in `architecture.md`.
+
+
+
+# SESS API and Module Skeleton
+
+`/app` is a runnable **Python 3.11+ / FastAPI** skeleton for SESS. No business logic, EHR vendor integration, persistence implementation, identity provider, summarization algorithm, or authorization policy is implemented. Every module operation raises `NotImplementedError`. HTTP routes deliberately translate that into the required HTTP 501 response.
+
+
+## Start the application
+
+```bash
+# From the project directory:
+python -m venv .venv
+
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+
+# macOS / Linux:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Open:
+- API root: http://127.0.0.1:8000/
+- Interactive API documentation: http://127.0.0.1:8000/docs
+- OpenAPI schema: http://127.0.0.1:8000/openapi.json
+
+Each API route currently returns HTTP `501` with:
+```json
+{"error": "not_implemented", "message": "..."}
+```
+
+## Project layout
+
+```text
+app/
+  __init__.py
+  main.py
+  web_interface.py
+  identity_and_access.py
+  ehr_connector.py
+  patient_records.py
+  summary_generation.py
+  source_traceability.py
+  audit_recording.py
+contracts.md
+requirements.txt
+```
+
+The module files correspond to the seven modules in `architecture.md`. `main.py` is the application entry point and `web_interface.py` contains the HTTP boundary. Neither introduces another business module.
