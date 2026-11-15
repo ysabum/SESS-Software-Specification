@@ -1,5 +1,6 @@
 """Identity and Access module: authentication, role-based authorization, and sessions."""
 
+import secrets
 from datetime import datetime
 from typing import Any, Mapping, Protocol
 
@@ -26,8 +27,28 @@ def authenticate_user(
     session_store: SessionStore,
     clock: Any,
 ) -> Mapping[str, Any]:
-    """Authenticate credentials and create an authenticated session."""
-    raise NotImplementedError
+    """Authenticate credentials and create an authenticated session.
+
+    The identity provider signals rejected credentials by raising
+    ``PermissionError``; any other exception is an identity-provider failure and
+    is surfaced unchanged. No session is created unless authentication succeeds,
+    and a session store that returns ``None`` from ``create`` is treated as a failure.
+    ``clock`` is a ``datetime`` value supplied fresh by the caller.
+    """
+    identity = identity_provider.authenticate(username, password)
+
+    session = {
+        "session_id": secrets.token_urlsafe(32),
+        "user_id": identity["user_id"],
+        "permissions": identity["permissions"],
+        "created_at": clock,
+        "last_activity_at": clock,
+    }
+    if session_store.create(session) is None:
+        # The store did not confirm the session; do not hand out a session that
+        # may not exist.
+        raise RuntimeError("session store did not confirm session creation")
+    return session
 
 
 def authorize_patient_access(
