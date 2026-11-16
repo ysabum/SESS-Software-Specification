@@ -16,6 +16,7 @@ class AuthorizationPolicy(Protocol):
 class SessionStore(Protocol):
     def create(self, session: Mapping[str, Any]) -> Mapping[str, Any]: ...
     def get(self, session_id: str) -> Mapping[str, Any] | None: ...
+    def update(self, session: Mapping[str, Any]) -> Mapping[str, Any]: ...
     def end(self, session_id: str) -> None: ...
 
 
@@ -69,5 +70,23 @@ def validate_session(
     clock: Any,
     inactivity_timeout_seconds: int,
 ) -> Mapping[str, Any]:
-    """Validate a session and end or lock it after the configured inactivity period."""
-    raise NotImplementedError
+    """Validate a session and end it after the configured inactivity period.
+
+    Raises ``PermissionError`` for an unknown session or one that has been idle
+    for longer than ``inactivity_timeout_seconds`` (the session is then ended, so
+    authentication is required again). A session idle for exactly the timeout is
+    still valid. On success ``last_activity_at`` is refreshed to ``clock`` and the
+    refreshed session is returned. ``clock`` is a ``datetime`` value.
+    """
+    session = session_store.get(session_id)
+    if session is None:
+        raise PermissionError("unknown or ended session")
+
+    idle_seconds = (clock - session["last_activity_at"]).total_seconds()
+    if idle_seconds > inactivity_timeout_seconds:
+        session_store.end(session_id)
+        raise PermissionError("session expired after inactivity")
+
+    refreshed = {**session, "last_activity_at": clock}
+    session_store.update(refreshed)
+    return refreshed

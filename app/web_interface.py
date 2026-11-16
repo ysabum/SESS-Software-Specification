@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from app.identity_and_access import authenticate_user
+from app.identity_and_access import authenticate_user, validate_session
 
 router = APIRouter()
 
@@ -26,6 +26,46 @@ def _authentication_failed() -> JSONResponse:
             "message": "Authentication failed.",
         },
     )
+
+
+def _authentication_required() -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        content={
+            "error": "authentication_required",
+            "message": "A valid, active session is required.",
+        },
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _require_session(request: Request) -> JSONResponse | None:
+    """Return an error response unless the request carries a valid, active session.
+
+    The session ID is read from an ``Authorization: Bearer <session_id>`` header.
+    """
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    token = token.strip()
+    if scheme.lower() != "bearer" or not token:
+        return _authentication_required()
+    try:
+        validate_session(
+            token,
+            session_store=request.app.state.session_store,
+            clock=datetime.now(timezone.utc),
+            inactivity_timeout_seconds=request.app.state.inactivity_timeout_seconds,
+        )
+    except PermissionError:
+        return _authentication_required()
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "session_service_unavailable",
+                "message": "The session service is unavailable.",
+            },
+        )
+    return None
 
 
 @router.post("/api/authentication/sessions")
@@ -75,12 +115,18 @@ async def create_session(request: Request) -> JSONResponse:
 @router.get("/api/patients/{patient_id}/records")
 async def get_patient_records(patient_id: str, request: Request) -> JSONResponse:
     """FR-003 and FR-005: retrieve categorized patient records and apply search/filters."""
+    rejection = _require_session(request)
+    if rejection is not None:
+        return rejection
     return _not_implemented("Patient record retrieval, categorization, and search are not implemented.")
 
 
 @router.post("/api/patients/{patient_id}/summaries")
 async def create_patient_summary(patient_id: str, request: Request) -> JSONResponse:
     """FR-002 and FR-006: generate a detail-level summary with source associations."""
+    rejection = _require_session(request)
+    if rejection is not None:
+        return rejection
     return _not_implemented("Patient summary generation is not implemented.")
 
 
@@ -89,4 +135,7 @@ async def get_summary_item_source(
     summary_id: str, item_id: str, request: Request
 ) -> JSONResponse:
     """FR-004 and FR-006: authorize and resolve a summary item's source record."""
+    rejection = _require_session(request)
+    if rejection is not None:
+        return rejection
     return _not_implemented("Summary-item source resolution is not implemented.")

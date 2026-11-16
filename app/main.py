@@ -60,6 +60,12 @@ class InMemorySessionStore:
     def get(self, session_id: str) -> Mapping[str, Any] | None:
         return self._sessions.get(session_id)
 
+    def update(self, session: Mapping[str, Any]) -> Mapping[str, Any]:
+        if session["session_id"] not in self._sessions:
+            raise KeyError(session["session_id"])
+        self._sessions[session["session_id"]] = dict(session)
+        return self._sessions[session["session_id"]]
+
     def end(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)
 
@@ -72,6 +78,8 @@ app = FastAPI(
 
 app.state.identity_provider = InMemoryIdentityProvider({_DEMO_USERNAME: (_DEMO_PASSWORD, [])})
 app.state.session_store = InMemorySessionStore()
+# Development default; the deploying organization configures the real value (NFR-001).
+app.state.inactivity_timeout_seconds = 900
 
 app.include_router(router)
 
